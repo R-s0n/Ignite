@@ -25,19 +25,16 @@ f = open(f"{home_dir}/Logs/automation.log", "a")
 f.write(f"Ignite.py - Start Time: {now_start}\n")
 f.close()
 
-r = requests.post('http://10.0.0.211:8000/api/url/all', data={})
-urls = r.json()
+r = requests.post('http://10.0.0.211:8000/api/auto', data={'fqdn':fqdn})
+thisFqdn = r.json()
 
-url_list = []
-
-for u in urls:
-    if u['fqdn'] == fqdn:
-        if u['url'][-1:] == "/":
-            url_list.append(u['url'][:-1])
-        else:
-            url_list.append(u['url'])
+url_list = thisFqdn['targetUrls']
 
 print(url_list)
+
+for target_url in url_list:
+    r = requests.post('http://10.0.0.211:8000/api/url/auto', data={'url':target_url})
+    thisUrl = r.json()
 
 wordlists = subprocess.run([f"ls {home_dir}/Wordlists/SecLists/Discovery/Web-Content/"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, shell=True)
 wordlist_arr = wordlists.stdout.split('\n')
@@ -58,18 +55,44 @@ for directory in dir_arr:
         if sub_wordlist[-4:] == ".txt":
             wordlist_arr.append(f"{directory}/{sub_wordlist}")
 
+
 for target_url in url_list:
     l = len(wordlist_arr)-1
-    for x in range(l):
+    wordlist_check = r = requests.post('http://10.0.0.211:8000/api/url/auto', data={'url':target_url})
+    wordlist_check_data = wordlist_check.json()
+    wordlist_len = len(wordlist_check_data['completedWordlists'])
+    while wordlist_len < l:
+        print(f"[*] {wordlist_len} out of {l} wordlists attempted...")
+        r = requests.post('http://10.0.0.211:8000/api/url/auto', data={'url':target_url})
+        thisUrl = r.json()
+        print(thisUrl)
         wordlist = random.choice(wordlist_arr)
+        print(thisUrl['completedWordlists'])
+        if wordlist in thisUrl['completedWordlists']:
+            print(f"[!] The {wordlist} wordlist has already been run against {target_url}!  Skipping...")
+            i = wordlist_arr.index(wordlist)
+            del wordlist_arr[i]
+            continue
+        thisUrl['completedWordlists'].append(wordlist)
+        print(thisUrl['completedWordlists'])
         format_test = subprocess.run([f"head -n 1 {home_dir}/Wordlists/SecLists/Discovery/Web-Content/{wordlist}"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, shell=True)
         print(format_test.stdout[0])
         if format_test.stdout[0] == "/":
-            subprocess.run([f'{home_dir}/go/bin/ffuf -w {home_dir}/Wordlists/SecLists/Discovery/Web-Content/{wordlist} -u {target_url}FUZZ -recursion -recursion-depth 2 -r -p 0.1-3.0 -sa -t 50 -replay-proxy http://10.0.0.208:8080'], shell=True)
+            subprocess.run([f'{home_dir}/go/bin/ffuf -w {home_dir}/Wordlists/SecLists/Discovery/Web-Content/{wordlist} -u {target_url}FUZZ -recursion -recursion-depth 2 -r -p 0.1-3.0 -sa -t 50 -replay-proxy http://10.0.0.208:8080 -o /tmp/ffuf-results.tmp -of json'], shell=True)
         else:
-            subprocess.run([f'{home_dir}/go/bin/ffuf -w {home_dir}/Wordlists/SecLists/Discovery/Web-Content/{wordlist} -u {target_url}/FUZZ -recursion -recursion-depth 2 -r -p 0.1-3.0 -sa -t 50 -replay-proxy http://10.0.0.208:8080'], shell=True)
+            subprocess.run([f'{home_dir}/go/bin/ffuf -w {home_dir}/Wordlists/SecLists/Discovery/Web-Content/{wordlist} -u {target_url}/FUZZ -recursion -recursion-depth 2 -r -p 0.1-3.0 -sa -t 50 -replay-proxy http://10.0.0.208:8080 -o /tmp/ffuf-results.tmp -of json'], shell=True)
         i = wordlist_arr.index(wordlist)
         del wordlist_arr[i]
+
+        with open('/tmp/ffuf-test.tmp') as json_file:
+            data = json.load(json_file)
+        
+        for result in data['results']:
+            result_data = {"endpoint":result['input']['FUZZ'], "statusCode":result['status'], "responseLength":result['length']}
+            thisUrl['endpoints'].append(result_data)
+
+        requests.post('http://10.0.0.211:8000/api/url/auto/update', json=thisUrl, headers={'Content-type':'application/json'})
+        wordlist_len = len(thisUrl['completedWordlists'])
 
 now_end = datetime.now().strftime("%d-%m-%y_%I%p")
 f = open(f"{home_dir}/Logs/automation.log", "a")
