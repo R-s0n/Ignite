@@ -139,7 +139,14 @@ else:
                 result_data['endpoint'] = "/"
             if result_data['endpoint'][0] != "/":
                 result_data['endpoint'] = f"/{result_data['endpoint']}"
-            if '?' not in result_data['endpoint'] and '#' not in result_data['endpoint'] and result_data['endpoint'] not in thisUrl['endpoints']:
+            result_str = result_data['endpoint']
+            current_endpoints_list = []
+            current_endpoints = thisUrl['endpoints']
+            for endpoint in current_endpoints:
+                current_endpoints_list.append(endpoint['endpoint'])
+            print(result_str)
+            print(current_endpoints_list)
+            if '?' not in result_data['endpoint'] and '#' not in result_data['endpoint'] and result_str not in current_endpoints_list:
                 thisUrl['endpoints'].append(result_data)
         requests.post('http://10.0.0.211:8000/api/url/auto/update', json=thisUrl, headers={'Content-type':'application/json'})
         wordlist_len = len(thisUrl['completedWordlists'])

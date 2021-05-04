@@ -87,6 +87,82 @@ for endpoint in sorted_endpoints:
             print(f"[!] Database updated failed.  ")
             print(f"[!] {e}")
 
+print("[+] Parameter scanning using GET requests completed successfully!  Starting second scan using POST requests...")
+
+for endpoint in sorted_endpoints:
+    if str(endpoint['statusCode'])[0] == '2':
+        print(f"[-] Target Endpoint: {endpoint['endpoint']}\n[-] Status: {endpoint['statusCode']} -- Length: {endpoint['responseLength']}")
+        try:
+            thisEndpoint = endpoint['endpoint']
+            if thisEndpoint[-4:] == ".ico" or thisEndpoint[-4:] == ".txt":
+                print(f"[!] Endpoint is a static file.  Skipping...")
+                continue
+        except:
+            print("[-] Targeting root directory...")
+            thisEndpoint = "/"
+        target = url + thisEndpoint
+        print(f"[-] Scanning {target} for hidden parameters...")
+        subprocess.run([f"arjun -u {target} -oJ /tmp/arjun-test.tmp -w /home/rs0n/Wordlists/SecLists/Discovery/Web-Content/params.txt -oB 10.0.0.208:8080 -q -m POST"], shell=True)
+        with open('/tmp/arjun-test.tmp') as json_file:
+            data = json.load(json_file)
+        print(f"[+] Scan complete!")
+        if target not in data:
+            print(f"[!] No parameters found for {target} -- Skipping database update...")
+            continue
+        for param in data[target]['params']:
+            print(f'[+] Parameter found: {param}')
+        print(f"[-] Updating database...")
+        try:
+            r = requests.post('http://10.0.0.211:8000/api/url/auto', data={'url':url})
+            updateUrl = r.json()
+            for endpoint in updateUrl['endpoints']:
+                if endpoint['endpoint'] == thisEndpoint:
+                    endpointToUpdate = endpoint
+                    endpointIndex = updateUrl['endpoints'].index(endpoint)
+            updateUrl['endpoints'][endpointIndex]['arjunPost'] = {"method": data[target]['method'], "params": data[target]['params']}
+            requests.post('http://10.0.0.211:8000/api/url/auto/update', json=updateUrl)
+        except Exception as e:
+            print(f"[!] Database updated failed.  ")
+            print(f"[!] {e}")
+
+print("[+] Parameter scanning using POST requests completed successfully!  Starting final scan using POST requests in JSON format...")
+
+for endpoint in sorted_endpoints:
+    if str(endpoint['statusCode'])[0] == '2':
+        print(f"[-] Target Endpoint: {endpoint['endpoint']}\n[-] Status: {endpoint['statusCode']} -- Length: {endpoint['responseLength']}")
+        try:
+            thisEndpoint = endpoint['endpoint']
+            if thisEndpoint[-4:] == ".ico" or thisEndpoint[-4:] == ".txt":
+                print(f"[!] Endpoint is a static file.  Skipping...")
+                continue
+        except:
+            print("[-] Targeting root directory...")
+            thisEndpoint = "/"
+        target = url + thisEndpoint
+        print(f"[-] Scanning {target} for hidden parameters...")
+        subprocess.run([f"arjun -u {target} -oJ /tmp/arjun-test.tmp -w /home/rs0n/Wordlists/SecLists/Discovery/Web-Content/params.txt -oB 10.0.0.208:8080 -q -m JSON"], shell=True)
+        with open('/tmp/arjun-test.tmp') as json_file:
+            data = json.load(json_file)
+        print(f"[+] Scan complete!")
+        if target not in data:
+            print(f"[!] No parameters found for {target} -- Skipping database update...")
+            continue
+        for param in data[target]['params']:
+            print(f'[+] Parameter found: {param}')
+        print(f"[-] Updating database...")
+        try:
+            r = requests.post('http://10.0.0.211:8000/api/url/auto', data={'url':url})
+            updateUrl = r.json()
+            for endpoint in updateUrl['endpoints']:
+                if endpoint['endpoint'] == thisEndpoint:
+                    endpointToUpdate = endpoint
+                    endpointIndex = updateUrl['endpoints'].index(endpoint)
+            updateUrl['endpoints'][endpointIndex]['arjunJson'] = {"method": data[target]['method'], "params": data[target]['params']}
+            requests.post('http://10.0.0.211:8000/api/url/auto/update', json=updateUrl)
+        except Exception as e:
+            print(f"[!] Database updated failed.  ")
+            print(f"[!] {e}")
+
 end = time.time()
 runtime_seconds = math.floor(end - start)
 runtime_minutes = math.floor(runtime_seconds / 60)
