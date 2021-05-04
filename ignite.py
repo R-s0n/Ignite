@@ -87,12 +87,12 @@ if hasUrl == False:
                 continue
             thisUrl['completedWordlists'].append(wordlist)
             print(thisUrl['completedWordlists'])
-            format_test = subprocess.run([f"head -n 1 {home_dir}/Wordlists/SecLists/Discovery/Web-Content/{wordlist}"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, shell=True)
+            format_test = subprocess.run([f"head -n 1 '{home_dir}/Wordlists/SecLists/Discovery/Web-Content/{wordlist}'"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, shell=True)
             print(format_test.stdout[0])
             if format_test.stdout[0] == "/":
-                subprocess.run([f'{home_dir}/go/bin/ffuf -w {home_dir}/Wordlists/SecLists/Discovery/Web-Content/{wordlist} -u {target_url}FUZZ -recursion -recursion-depth 2 -r -p 0.1-3.0 -sa -t 50 -replay-proxy http://10.0.0.208:8080 -o /tmp/ffuf-results.tmp -of json'], shell=True)
+                subprocess.run([f"{home_dir}/go/bin/ffuf -w '{home_dir}/Wordlists/SecLists/Discovery/Web-Content/{wordlist}' -u {target_url}FUZZ -recursion -recursion-depth 2 -r -p 0.1-3.0 -sa -t 50 -replay-proxy http://10.0.0.208:8080 -o /tmp/ffuf-results.tmp -of json"], shell=True)
             else:
-                subprocess.run([f'{home_dir}/go/bin/ffuf -w {home_dir}/Wordlists/SecLists/Discovery/Web-Content/{wordlist} -u {target_url}/FUZZ -recursion -recursion-depth 2 -r -p 0.1-3.0 -sa -t 50 -replay-proxy http://10.0.0.208:8080 -o /tmp/ffuf-results.tmp -of json'], shell=True)
+                subprocess.run([f"{home_dir}/go/bin/ffuf -w '{home_dir}/Wordlists/SecLists/Discovery/Web-Content/{wordlist}' -u {target_url}/FUZZ -recursion -recursion-depth 2 -r -p 0.1-3.0 -sa -t 50 -replay-proxy http://10.0.0.208:8080 -o /tmp/ffuf-results.tmp -of json"], shell=True)
             i = wordlist_arr.index(wordlist)
             del wordlist_arr[i]
             with open('/tmp/ffuf-results.tmp') as json_file:
@@ -123,19 +123,22 @@ else:
             continue
         thisUrl['completedWordlists'].append(wordlist)
         print(thisUrl['completedWordlists'])
-        format_test = subprocess.run([f"head -n 1 {home_dir}/Wordlists/SecLists/Discovery/Web-Content/{wordlist}"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, shell=True)
+        format_test = subprocess.run([f"head -n 1 '{home_dir}/Wordlists/SecLists/Discovery/Web-Content/{wordlist}'"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, shell=True)
         print(format_test.stdout[0])
         if format_test.stdout[0] == "/":
-            subprocess.run([f'{home_dir}/go/bin/ffuf -w {home_dir}/Wordlists/SecLists/Discovery/Web-Content/{wordlist} -u {target_url}FUZZ -recursion -recursion-depth 2 -r -p 0.1-3.0 -sa -t 50 -replay-proxy http://10.0.0.208:8080 -o /tmp/ffuf-results.tmp -of json'], shell=True)
+            subprocess.run([f"{home_dir}/go/bin/ffuf -w '{home_dir}/Wordlists/SecLists/Discovery/Web-Content/{wordlist}' -u {target_url}FUZZ -recursion -recursion-depth 2 -r -p 0.1-3.0 -sa -t 50 -replay-proxy http://10.0.0.208:8080 -o /tmp/ffuf-results.tmp -of json"], shell=True)
         else:
-            subprocess.run([f'{home_dir}/go/bin/ffuf -w {home_dir}/Wordlists/SecLists/Discovery/Web-Content/{wordlist} -u {target_url}/FUZZ -recursion -recursion-depth 2 -r -p 0.1-3.0 -sa -t 50 -replay-proxy http://10.0.0.208:8080 -o /tmp/ffuf-results.tmp -of json'], shell=True)
+            subprocess.run([f"{home_dir}/go/bin/ffuf -w '{home_dir}/Wordlists/SecLists/Discovery/Web-Content/{wordlist}' -u {target_url}/FUZZ -recursion -recursion-depth 2 -r -p 0.1-3.0 -sa -t 50 -replay-proxy http://10.0.0.208:8080 -o /tmp/ffuf-results.tmp -of json"], shell=True)
         i = wordlist_arr.index(wordlist)
         del wordlist_arr[i]
         with open('/tmp/ffuf-results.tmp') as json_file:
             data = json.load(json_file)
         for result in data['results']:
             result_data = {"endpoint":result['input']['FUZZ'], "statusCode":result['status'], "responseLength":result['length']}
-            thisUrl['endpoints'].append(result_data)
+            if result_data['endpoint'][0] != "/" or len(result_data['endpoint']) < 1:
+                result_data['endpoint'] = f"/{result_data['endpoint']}"
+            if '?' not in result_data['endpoint'] and '#' not in result_data['endpoint']:
+                thisUrl['endpoints'].append(result_data)
         requests.post('http://10.0.0.211:8000/api/url/auto/update', json=thisUrl, headers={'Content-type':'application/json'})
         wordlist_len = len(thisUrl['completedWordlists'])
 
