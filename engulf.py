@@ -44,6 +44,13 @@ except:
     print(f"[!] URL '{url}' was not found in the database.  Exiting...")
     sys.exit(2)
 
+counter = 0
+for endpoint in sorted_endpoints:
+    if str(endpoint['statusCode'])[0] == '2':
+        counter += 1
+print(f"[-] Starting parameter enumeration on {thisUrl['url']}")
+print(f"[-] {counter} parameters found with a 2XX response code")
+
 for endpoint in sorted_endpoints:
     if str(endpoint['statusCode'])[0] == '2':
         print(f"[-] Target Endpoint: {endpoint['endpoint']}\n[-] Status: {endpoint['statusCode']} -- Length: {endpoint['responseLength']}")
@@ -79,3 +86,9 @@ for endpoint in sorted_endpoints:
         except Exception as e:
             print(f"[!] Database updated failed.  ")
             print(f"[!] {e}")
+
+end = time.time()
+runtime_seconds = math.floor(end - start)
+runtime_minutes = math.floor(runtime_seconds / 60)
+
+print(f"[+] Engulf.py completed successfully in {runtime_minutes} minutes!")

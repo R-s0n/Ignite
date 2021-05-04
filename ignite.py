@@ -135,9 +135,11 @@ else:
             data = json.load(json_file)
         for result in data['results']:
             result_data = {"endpoint":result['input']['FUZZ'], "statusCode":result['status'], "responseLength":result['length']}
-            if result_data['endpoint'][0] != "/" or len(result_data['endpoint']) < 1:
+            if len(result_data['endpoint']) < 1:
+                result_data['endpoint'] = "/"
+            if result_data['endpoint'][0] != "/":
                 result_data['endpoint'] = f"/{result_data['endpoint']}"
-            if '?' not in result_data['endpoint'] and '#' not in result_data['endpoint']:
+            if '?' not in result_data['endpoint'] and '#' not in result_data['endpoint'] and result_data['endpoint'] not in thisUrl['endpoints']:
                 thisUrl['endpoints'].append(result_data)
         requests.post('http://10.0.0.211:8000/api/url/auto/update', json=thisUrl, headers={'Content-type':'application/json'})
         wordlist_len = len(thisUrl['completedWordlists'])
